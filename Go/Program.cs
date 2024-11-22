@@ -77,12 +77,14 @@ void PlaceStone()
 {
     if (board[cursorPos.x, cursorPos.y] != empty)
         return;
+    
     board[cursorPos.x, cursorPos.y] = turn;
     if (!Capture())
     {
         board[cursorPos.x, cursorPos.y] = empty;
         return;
     }
+    
     Console.SetCursorPosition(cursorPos.x * 2 + 2, cursorPos.y + 1);    //Transforms cursorPos to Console-space
     if (turn == black)
     {
@@ -126,6 +128,12 @@ bool Capture(bool currentMoveProtected = true)
             {
                 if (hasLiberty[x,y])
                     continue;
+                if (_board[x, y] == empty)
+                {
+                    hasLiberty[x, y] = true;
+                    continue;
+                }
+
                 foreach (var tile in ((int x, int y)[])[(x, y-1), (x, y+1), (x-1, y), (x+1, y)])
                 {
                     if (tile.x is -1 or 19 || tile.y is -1 or 19)
@@ -167,8 +175,8 @@ bool Capture(bool currentMoveProtected = true)
 
     if (captured && !currentMoveProtected)
         return false;
-    if (!captured && currentMoveProtected)    //if placed stone would be insta-captured
-        return Capture(false);
+    if (!captured && currentMoveProtected)
+        return Capture(false);    //if placed stone would be insta-captured
     board = _board;
     return true;    //move is valid
 }
