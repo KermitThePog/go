@@ -7,6 +7,8 @@ const int white = 2;
 var cursorPos = (x: 9, y: 9);
 var board = new int[19, 19];
 var hasLiberty = new bool[19, 19];
+var koCheckBoard = new int[19, 19];
+var lastBoard = new int[19, 19];
 var turn = black;
 
 
@@ -40,9 +42,13 @@ void Init()
         Thread.Sleep(1);
     }
     Console.ForegroundColor = ConsoleColor.White;
+
+    koCheckBoard = (int[,])board.Clone();
+    lastBoard = (int[,])board.Clone();
     
     Console.SetCursorPosition(10, 0);
     Console.Write("B L A C K   T U R N");
+    
 }
 
 void Update()
@@ -78,12 +84,8 @@ void PlaceStone()
     if (board[cursorPos.x, cursorPos.y] != empty)
         return;
     
-    board[cursorPos.x, cursorPos.y] = turn;
     if (!EvaluateMove()) //Execute move and check its validity
-    {
-        board[cursorPos.x, cursorPos.y] = empty;    //Undo turn
         return;
-    }
     
     Console.SetCursorPosition(cursorPos.x * 2 + 2, cursorPos.y + 1);    //Transforms cursorPos to Console-space
     if (turn == black)
@@ -104,7 +106,8 @@ void PlaceStone()
 
 bool EvaluateMove(bool currentMoveProtected = true)
 {
-    var _board = board;
+    var _board = (int[,])board.Clone();
+    _board[cursorPos.x, cursorPos.y] = turn;
     
     //Reset all liberties
     for (int x = 0; x < 19; x++)
@@ -152,7 +155,6 @@ bool EvaluateMove(bool currentMoveProtected = true)
     
     //Remove all stones without liberties
     bool captured = false;
-    Console.ForegroundColor = ConsoleColor.DarkGray;
     for (int x = 0; x < 19; x++)
     {
         for (int y = 0; y < 19; y++)
@@ -162,6 +164,37 @@ bool EvaluateMove(bool currentMoveProtected = true)
 
             captured = true;
             _board[x, y] = empty;
+        }
+    }
+
+    //Check for Ko situation
+    for (int x = 0; x < 19; x++)
+    {
+        for (int y = 0; y < 19; y++)
+        {
+            if (_board[x, y] != koCheckBoard[x, y])
+             goto notKo;
+        }
+    }
+    return false;
+    
+    notKo:
+    if (captured && !currentMoveProtected)  //The currently placed stone is captured
+        return false;
+    if (!captured && currentMoveProtected)  //If nothing changes, check if the currently placed stone would be captured
+        return EvaluateMove(false);
+    board = _board;
+    koCheckBoard = (int[,])lastBoard.Clone();
+    lastBoard = (int[,])board.Clone();
+    
+    Console.ForegroundColor = ConsoleColor.DarkGray;
+    for (int x = 0; x < 19; x++)
+    {
+        for (int y = 0; y < 19; y++)
+        {
+            if (hasLiberty[x, y])
+                continue;
+
             Console.SetCursorPosition(x * 2 + 1, y + 1);
             if (x is 3 or 9 or 15 && y is 3 or 9 or 15)
             {
@@ -174,11 +207,6 @@ bool EvaluateMove(bool currentMoveProtected = true)
         }
     }
     Console.ForegroundColor = ConsoleColor.White;
-
-    if (captured && !currentMoveProtected)  //The currently placed stone is captured
-        return false;
-    if (!captured && currentMoveProtected)  //If nothing changes, check if the currently placed stone would be captured
-        return EvaluateMove(false);
-    board = _board;
+    
     return true;    //Move is valid
 }
