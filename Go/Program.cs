@@ -22,7 +22,7 @@ void Init()
     Console.Title = "Go";
 
     Console.ForegroundColor = ConsoleColor.DarkGray;
-    for (int x = 0; x < 19; x++)
+    for (int x = 0; x < 19; x++)    //Draw board
     {
         Console.Write("\n ");
         for (int y = 0; y < 19; y++)
@@ -79,9 +79,9 @@ void PlaceStone()
         return;
     
     board[cursorPos.x, cursorPos.y] = turn;
-    if (!Capture())
+    if (!EvaluateMove()) //Execute move and check its validity
     {
-        board[cursorPos.x, cursorPos.y] = empty;
+        board[cursorPos.x, cursorPos.y] = empty;    //Undo turn
         return;
     }
     
@@ -102,10 +102,11 @@ void PlaceStone()
     }
 }
 
-bool Capture(bool currentMoveProtected = true)
+bool EvaluateMove(bool currentMoveProtected = true)
 {
     var _board = board;
-    //reset all liberties
+    
+    //Reset all liberties
     for (int x = 0; x < 19; x++)
     {
         for (int y = 0; y < 19; y++)
@@ -117,7 +118,7 @@ bool Capture(bool currentMoveProtected = true)
     if (currentMoveProtected)
         hasLiberty[cursorPos.x, cursorPos.y] = true;
 
-    //find liberties
+    //Find liberties
     var changed = true;
     while (changed)
     {
@@ -134,6 +135,7 @@ bool Capture(bool currentMoveProtected = true)
                     continue;
                 }
 
+                //Check surrounding tiles
                 foreach (var tile in ((int x, int y)[])[(x, y-1), (x, y+1), (x-1, y), (x+1, y)])
                 {
                     if (tile.x is -1 or 19 || tile.y is -1 or 19)
@@ -148,35 +150,35 @@ bool Capture(bool currentMoveProtected = true)
         }
     }
     
-    //remove all stones without liberties
+    //Remove all stones without liberties
     bool captured = false;
     Console.ForegroundColor = ConsoleColor.DarkGray;
     for (int x = 0; x < 19; x++)
     {
         for (int y = 0; y < 19; y++)
         {
-            if (!hasLiberty[x, y])
+            if (hasLiberty[x, y])
+                continue;
+
+            captured = true;
+            _board[x, y] = empty;
+            Console.SetCursorPosition(x * 2 + 1, y + 1);
+            if (x is 3 or 9 or 15 && y is 3 or 9 or 15)
             {
-                captured = true;
-                _board[x, y] = empty;
-                Console.SetCursorPosition(x * 2 + 1, y + 1);
-                if (x is 3 or 9 or 15 && y is 3 or 9 or 15)
-                {
-                    Console.ForegroundColor = ConsoleColor.DarkCyan;
-                    Console.Write(" +");
-                    Console.ForegroundColor = ConsoleColor.DarkGray;
-                }
-                else
-                    Console.Write(" +");
+                Console.ForegroundColor = ConsoleColor.DarkCyan;
+                Console.Write(" +");
+                Console.ForegroundColor = ConsoleColor.DarkGray;
             }
+            else
+                Console.Write(" +");
         }
     }
     Console.ForegroundColor = ConsoleColor.White;
 
-    if (captured && !currentMoveProtected)
+    if (captured && !currentMoveProtected)  //The currently placed stone is captured
         return false;
-    if (!captured && currentMoveProtected)
-        return Capture(false);    //if placed stone would be insta-captured
+    if (!captured && currentMoveProtected)  //If nothing changes, check if the currently placed stone would be captured
+        return EvaluateMove(false);
     board = _board;
-    return true;    //move is valid
+    return true;    //Move is valid
 }
